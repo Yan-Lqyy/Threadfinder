@@ -3,131 +3,118 @@ import face_recognition
 import os
 import numpy as np
 
-# --- Configuration ---
-# These can be adjusted as needed
-FACE_RECOGNITION_TOLERANCE = 0.55 # As adjusted in the previous step
-DETECTION_MODEL = "hog" # "hog" is faster, "cnn" is more accurate (requires dlib compiled with CUDA for GPU)
+# These are no longer primary config constants here, as they'll be passed as arguments.
+# They can serve as internal defaults if a value isn't provided, though the app.py should ensure they are.
+DEFAULT_FACE_RECOGNITION_TOLERANCE = 0.6 # Example
+DEFAULT_MIN_FACE_WIDTH_PERCENTAGE = 0.5  # Example
+DEFAULT_MIN_FACE_HEIGHT_PERCENTAGE = 0.5 # Example
+DEFAULT_MAX_FACES = 0                  # 0 or negative means no limit
+
+DETECTION_MODEL = "hog"
 VALID_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp')
 
-# --- New Configuration for Minimum Face Size by Percentage ---
-# Ignore faces if their width is less than this percentage of image width
-MIN_FACE_WIDTH_PERCENTAGE = 10
-# Ignore faces if their height is less than this percentage of image height
-MIN_FACE_HEIGHT_PERCENTAGE = 10
-
-# --- Helper Functions ---
-
 def load_known_faces(known_faces_dir: str) -> tuple[list, list]:
-    """
-    Loads known faces by traversing the known_faces_dir and its subdirectories.
-    Every image file found is treated as a reference photo for one person.
-    The person's name is derived from the filename (without extension),
-    with underscores replaced by spaces.
-
-    Args:
-        known_faces_dir: Path to the root directory containing known faces.
-
-    Returns:
-        A tuple containing:
-            - known_face_encodings: A list of 128-dimension face encodings.
-            - known_face_names: A list of names corresponding to the encodings.
-    """
+    # This function remains unchanged from the previous version
     known_face_encodings = []
     known_face_names = []
-
     print(f"Loading known faces from '{known_faces_dir}'...")
     if not os.path.exists(known_faces_dir) or not os.path.isdir(known_faces_dir):
          print(f"Warning: Known faces path '{known_faces_dir}' not found or is not a directory.")
          return known_face_encodings, known_face_names
-
     for dirpath, _, filenames in os.walk(known_faces_dir):
         for filename in filenames:
             if filename.lower().endswith(VALID_IMAGE_EXTENSIONS):
                 image_file_path = os.path.join(dirpath, filename)
                 person_name = os.path.splitext(filename)[0].replace("_", " ")
-
                 try:
                     image_array = face_recognition.load_image_file(image_file_path)
                     encodings = face_recognition.face_encodings(image_array)
-
                     if encodings:
                         known_face_encodings.append(encodings[0])
                         known_face_names.append(person_name)
-                        # print(f"  - Loaded '{person_name}' from {filename}") # Verbose
-                    else:
-                        # print(f"  Warning: No face found in reference image {image_file_path} ('{person_name}') - skipping.")
-                        pass # Keep output cleaner if many reference images have no faces
-
                 except Exception as e:
-                    print(f"  Warning: Could not load/process reference image {image_file_path} ('{person_name}'): {e}")
-    
+                    print(f"  Warning: Could not load/process reference image {image_file_path}: {e}")
     print(f"Total known face encodings loaded: {len(known_face_encodings)}")
     return known_face_encodings, known_face_names
 
 def get_face_annotations(
     image_path: str,
     known_face_encodings: list,
-    known_face_names: list
-) -> list:
+    known_face_names: list,
+    tolerance: float,
+    min_face_width_percentage: float,
+    min_face_height_percentage: float,
+    max_faces_to_process: int
+) -> dict: # Now returns a dictionary with annotations and messages
     """
-    Processes an image to find faces and attempts to recognize them against known faces.
-    Filters out faces smaller than a specified percentage of the image dimensions.
-    Returns a list of annotations (name and bounding box) for each detected face.
-
-    Args:
-        image_path: Path to the image to process.
-        known_face_encodings: List of known face encodings.
-        known_face_names: List of names for known faces.
-
-    Returns:
-        A list of dictionaries, where each dictionary contains:
-        {
-            "id": str,  // Unique identifier for the face in this image
-            "name": str,  // Recognized name or "Unknown"
-            "box": {"left": int, "top": int, "width": int, "height": int} // Bounding box
-        }
+    Processes an image to find faces, filters them, and attempts recognition.
     """
-    annotations = []
+    response_data = {"error": None, "annotations": [], "message": ""}
+    
     try:
         unknown_image_array = face_recognition.load_image_file(image_path)
-        img_height, img_width, _ = unknown_image_array.shape # Get image dimensions (height, width, channels)
+        img_height, img_width, _ = unknown_image_array.shape
     except Exception as e:
         print(f"Error loading target image {image_path}: {e}")
-        return annotations # Return empty list on error
+        response_data["error"] = f"Failed to load image: {e}"
+        return response_data
 
-    face_locations = face_recognition.face_locations(unknown_image_array, model=DETECTION_MODEL)
-    unknown_face_encodings = face_recognition.face_encodings(unknown_image_array, face_locations)
+    # 1. Find all face locations
+    all_face_locations = face_recognition.face_locations(unknown_image_array, model=DETECTION_MODEL)
+    initial_candidates_count = len(all_face_locations)
+    # print(f"Initially found {initial_candidates_count} face candidate(s).")
 
-    print(f"Initially found {len(face_locations)} face(s) in the uploaded image.")
-
-    # Calculate minimum required dimensions based on percentage
-    min_width_pixels = img_width * (MIN_FACE_WIDTH_PERCENTAGE / 100.0)
-    min_height_pixels = img_height * (MIN_FACE_HEIGHT_PERCENTAGE / 100.0)
+    # 2. Filter by size
+    min_abs_width = img_width * (min_face_width_percentage / 100.0)
+    min_abs_height = img_height * (min_face_height_percentage / 100.0)
     
-    processed_face_count = 0 # Counter for faces after filtering
-
-    for i, (top, right, bottom, left) in enumerate(face_locations):
+    sized_faces_data = [] # Stores (location_tuple, area, original_index_in_all_face_locations)
+    for i, loc in enumerate(all_face_locations):
+        top, right, bottom, left = loc
         width = right - left
         height = bottom - top
+        if width >= min_abs_width and height >= min_abs_height:
+            sized_faces_data.append({'location': loc, 'area': width * height, 'original_index': i})
+    
+    # print(f"{len(sized_faces_data)} face(s) after size filtering.")
 
-        # --- Filter for small faces based on percentage ---
-        # Ignore the face if its width is too small OR its height is too small
-        if width < min_width_pixels or height < min_height_pixels:
-            # print(f"  - Ignoring small face (width {width}px, height {height}px): min_width={min_width_pixels:.2f}px, min_height={min_height_pixels:.2f}px") # Optional: for debugging
-            continue 
-        # --- End filter ---
+    # 3. If max_faces is set, prioritize larger faces
+    if max_faces_to_process > 0 and len(sized_faces_data) > max_faces_to_process:
+        # Sort by area in descending order (larger faces first)
+        sized_faces_data.sort(key=lambda x: x['area'], reverse=True)
+        final_faces_to_process_data = sized_faces_data[:max_faces_to_process]
+        # print(f"Prioritizing {len(final_faces_to_process_data)} largest faces due to limit ({max_faces_to_process}).")
+    else:
+        final_faces_to_process_data = sized_faces_data
+    
+    # 4. Get encodings for the final set of faces
+    # To ensure correct encodings, get all encodings first then select by original_index
+    if not final_faces_to_process_data: # No faces left after filtering
+        response_data["message"] = f"No faces met the size criteria from {initial_candidates_count} initial candidates."
+        return response_data
+
+    # Get encodings for ALL initially detected faces (less efficient but safer for index mapping)
+    all_unknown_face_encodings = face_recognition.face_encodings(unknown_image_array, all_face_locations)
+
+    annotations = []
+    for face_data in final_faces_to_process_data:
+        top, right, bottom, left = face_data['location']
+        original_index = face_data['original_index']
+
+        # Ensure we have an encoding for this face using its original index
+        if original_index >= len(all_unknown_face_encodings):
+            # This should ideally not happen if all_face_locations and all_unknown_face_encodings are consistent
+            print(f"Warning: Encoding not found for face at original index {original_index}. Skipping.")
+            continue
         
-        processed_face_count += 1
-
-
-        face_encoding_to_check = unknown_face_encodings[i]
+        face_encoding_to_check = all_unknown_face_encodings[original_index]
         name = "Unknown"
 
         if known_face_encodings:
             matches = face_recognition.compare_faces(
                 known_face_encodings, 
                 face_encoding_to_check, 
-                tolerance=FACE_RECOGNITION_TOLERANCE
+                tolerance=tolerance
             )
             face_distances = face_recognition.face_distance(known_face_encodings, face_encoding_to_check)
             
@@ -137,14 +124,24 @@ def get_face_annotations(
                     name = known_face_names[best_match_index]
         
         annotations.append({
-            "id": f"face-{i}", # Unique ID for this face in this image
+            "id": f"face-{original_index}", # Use original_index for a consistent ID
             "name": name,
             "box": {
                 "left": left,
                 "top": top,
-                "width": width,
-                "height": height
+                "width": (right - left),
+                "height": (bottom - top)
             }
         })
-    print(f"Processing {processed_face_count} face(s) after filtering by size ({MIN_FACE_WIDTH_PERCENTAGE}% width, {MIN_FACE_HEIGHT_PERCENTAGE}% height).")
-    return annotations
+
+    response_data["annotations"] = annotations
+    
+    # Construct a message about processing
+    msg_parts = [f"Processed {len(annotations)} face(s)."]
+    if initial_candidates_count > len(sized_faces_data) :
+        msg_parts.append(f"Filtered from {initial_candidates_count} initial candidates by size.")
+    if max_faces_to_process > 0 and len(sized_faces_data) > len(annotations):
+        msg_parts.append(f"Limited to {max_faces_to_process} largest faces.")
+    response_data["message"] = " ".join(msg_parts)
+    
+    return response_data

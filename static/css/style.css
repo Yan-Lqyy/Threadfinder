@@ -256,3 +256,134 @@ footer {
         font-size: 1.8rem;
     }
 }
+
+/* Controls Panel Enhancements */
+.controls-panel {
+    background: #fff;
+    padding: 1.5rem 2rem; /* More padding */
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    width: 100%;
+    max-width: 750px; /* Wider for controls */
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem; /* Increased gap */
+}
+.controls-panel h2 {
+    margin-top: 0;
+    text-align: center;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--light-gray);
+    padding-bottom: 0.75rem;
+    font-size: 1.6rem;
+}
+.file-upload-group {
+    margin-bottom: 0.5rem; /* Add some space below upload */
+}
+
+.parameter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.parameter label {
+    font-weight: 500;
+    color: #444; /* Slightly darker label text */
+    font-size: 0.95em;
+}
+.parameter label span { /* For the value display next to label */
+    font-weight: bold;
+    color: var(--primary-color);
+}
+.parameter input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+    accent-color: var(--primary-color); /* Modern way to style slider thumb/track */
+}
+.parameter input[type="number"].styled-input {
+    padding: 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    box-sizing: border-box;
+    width: 100px; /* Smaller width for number input */
+}
+
+.action-button, #reprocessButton {
+    padding: 0.8rem 1.5rem;
+    background-color: var(--secondary-color); /* Use secondary for action */
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 1.05rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    align-self: center;
+    margin-top: 0.8rem;
+}
+.action-button:hover, #reprocessButton:hover {
+    background-color: #27ae60; /* Darker green */
+    transform: translateY(-2px);
+}
+#reprocessButton {
+    background-color: var(--primary-color); /* Blue for reprocess */
+}
+#reprocessButton:hover {
+     background-color: #2980b9;
+}
+
+/* Enhanced Processing Indicator */
+.processing-indicator {
+    display: flex; /* Keep as flex, managed by JS */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem; /* More padding */
+    background-color: #ffffff; /* Solid white background */
+    border-radius: var(--border-radius);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); /* More pronounced shadow */
+    width: 100%;
+    max-width: 450px;
+    margin: 2rem auto; /* More margin */
+    text-align: center;
+}
+
+.spinner {
+    border: 7px solid #e0e0e0; /* Lighter gray for track */
+    border-top: 7px solid var(--primary-color);
+    border-radius: 50%;
+    width: 60px; /* Larger spinner */
+    height: 60px;
+    animation: spin 1.2s linear infinite; /* Slightly slower spin */
+    margin-bottom: 1.5rem;
+}
+
+.processing-indicator p { /* Renamed to processingStatusText in HTML */
+    font-size: 1.2rem; /* Larger text */
+    color: var(--dark-gray);
+    font-weight: 500;
+}
+
+/* Message Styling for #resultStats and #namesPanelStatus */
+#resultStats, #namesPanelStatus {
+    text-align: center;
+    margin-top: 0.8rem;
+    font-style: italic;
+    color: #555;
+    font-size: 0.95em;
+    padding: 0.5rem;
+    background-color: var(--light-gray);
+    border-radius: 4px;
+}
+#namesPanelStatus.error { /* Add a class for error messages */
+    color: #c0392b; /* Red for errors */
+    font-weight: bold;
+    background-color: #fdd;
+}
+
+/* General app container layout */
+.app-container {
+    /* Previous styles were fine, ensures controls and results stack nicely */
+    gap: 2rem; /* More space between controls and results */
+}

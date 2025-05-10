@@ -14,13 +14,38 @@
     </header>
 
     <div class="app-container">
-        <div class="upload-panel">
-            <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/gif">
-            <label for="imageUpload" class="upload-button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
-                <span>Choose Image</span>
-            </label>
-            <div id="processingStatus"></div>
+        <div class="controls-panel">
+            <h2>Settings & Upload</h2>
+            <div class="control-group file-upload-group">
+                <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/gif">
+                <label for="imageUpload" class="upload-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M9.75 6.75h4.5v иммунитет4.5l-5.25-5.25L3.75 11.25h4.5v-4.5zm-5.25 6.75h15v1.5H4.5z"/></svg> <!-- Placeholder icon -->
+                    <span>Choose Image (Max 5MB)</span>
+                </label>
+            </div>
+
+            <div class="parameter">
+                <label for="tolerance">Recognition Tolerance: <span id="toleranceValue">0.55</span> (Stricter ←→ Looser)</label>
+                <input type="range" id="tolerance" name="tolerance" min="0.35" max="0.7" value="0.55" step="0.01">
+            </div>
+            <div class="parameter">
+                <label for="minFaceWidthPercentage">Min Face Width (% of Image Width): <span id="minFaceWidthPercentageValue">2.0</span>%</label>
+                <input type="range" id="minFaceWidthPercentage" name="minFaceWidthPercentage" min="0.5" max="15" value="2.0" step="0.1">
+            </div>
+            <div class="parameter">
+                <label for="minFaceHeightPercentage">Min Face Height (% of Image Height): <span id="minFaceHeightPercentageValue">2.0</span>%</label>
+                <input type="range" id="minFaceHeightPercentage" name="minFaceHeightPercentage" min="0.5" max="15" value="2.0" step="0.1">
+            </div>
+            <div class="parameter">
+                <label for="maxFaces">Max Faces to Detail (0 for no limit):</label>
+                <input type="number" id="maxFaces" name="maxFaces" value="50" min="0" class="styled-input">
+            </div>
+            <button id="reprocessButton" class="action-button" style="display:none;">Re-process with Current Settings</button>
+        </div>
+        
+        <div class="processing-indicator" id="processingIndicator" style="display:none;">
+            <div class="spinner"></div>
+            <p id="processingStatusText">Processing... Please wait.</p>
         </div>
 
         <main id="resultsDisplay" style="display:none;">
@@ -28,17 +53,14 @@
                 <h3 id="imageName"></h3>
                 <div id="imageContainer">
                     <img id="imageDisplay" src="#" alt="Uploaded Image">
-                    <div id="overlayContainer">
-                        <!-- Bounding boxes and names will be added here by JavaScript -->
-                    </div>
+                    <div id="overlayContainer"></div>
                 </div>
+                 <p id="resultStats"></p>
             </div>
             <aside class="names-panel">
                 <h3>Recognized Faces</h3>
-                <ul id="recognizedNamesList">
-                    <!-- Names will be populated here -->
-                </ul>
-                <p id="namesPanelStatus"></p>
+                <ul id="recognizedNamesList"></ul>
+                <p id="namesPanelStatus"></p> <!-- For "No faces found" etc. -->
             </aside>
         </main>
     </div>
