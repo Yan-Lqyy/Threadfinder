@@ -1,0 +1,52 @@
+<!-- threadfinder_webapp/templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threadfinder - Face Recognition</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Threadfinder</h1>
+        <p>Find familiar faces in your photos.</p>
+    </header>
+
+    <div class="app-container">
+        <div class="upload-panel">
+            <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/gif">
+            <label for="imageUpload" class="upload-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                <span>Choose Image</span>
+            </label>
+            <div id="processingStatus"></div>
+        </div>
+
+        <main id="resultsDisplay" style="display:none;">
+            <div class="image-view-panel">
+                <h3 id="imageName"></h3>
+                <div id="imageContainer">
+                    <img id="imageDisplay" src="#" alt="Uploaded Image">
+                    <div id="overlayContainer">
+                        <!-- Bounding boxes and names will be added here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <aside class="names-panel">
+                <h3>Recognized Faces</h3>
+                <ul id="recognizedNamesList">
+                    <!-- Names will be populated here -->
+                </ul>
+                <p id="namesPanelStatus"></p>
+            </aside>
+        </main>
+    </div>
+
+    <footer>
+        <p>© Threadfinder Project</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
